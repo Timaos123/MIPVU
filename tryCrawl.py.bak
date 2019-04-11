@@ -1,0 +1,44 @@
+#coding:utf8
+'''
+Created on 2018年12月6日
+
+@author: Administrator
+'''
+import urllib.request as request
+from bs4 import BeautifulSoup as bs
+import json
+import re
+
+def main(word):
+    print("connecting to the website ...")
+    myUrl="https://www.macmillandictionary.com/dictionary/british/"+word
+    res=request.urlopen(myUrl)
+    res.encoding = 'utf-8'
+    
+    print("finding needed information ...")
+    soupStr=bs(res.read())
+    olBs=soupStr.find_all("ol",class_="senses")[0]
+    liBsList=olBs.find_all("li")
+    
+    print("finding meanings and examples ...")
+    meaningList=[]
+    exampleList=[]
+    for liItem in liBsList:
+        if len(liItem.find_all("div",class_="SENSE"))>0:
+            liDivItem=liItem.\
+                find_all("div",class_="SENSE")[0].\
+                find_all("span",class_="DEFINITION")[0]
+            meaningList.append(liDivItem.text)
+        if len(liItem.find_all("div",class_="SENSE"))>0:
+            try:
+                liDivItem=liItem.\
+                    find_all("div",class_="SENSE")[0].\
+                    find_all("p",class_="EXAMPLE")
+                exampleList.append([liDivItemItem.text for liDivItemItem in liDivItem])
+            except IndexError:
+                pass
+    meanExamDict=dict(list(zip(meaningList,exampleList)))
+    return meanExamDict
+    
+if __name__ == '__main__':
+    print(json.dumps(main("dog"),indent=4))
