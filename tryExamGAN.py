@@ -23,7 +23,7 @@ import keras.backend as K
 from gensim.models import Word2Vec
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"]="0"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 
 def getRecall(y_true, y_pred):
@@ -146,38 +146,21 @@ class ACGAN():
 
             #sampling
             np.random.shuffle(indexArr)
-            #add [:batch_size] to lower the memory
-            exams = X_train[indexArr][:batch_size]
-            wordLabels = y_train[indexArr][:batch_size]
-            meanSample = means[indexArr][:batch_size]
-            #embedded words, one-hot embedded words, word labels,meansample,exams
-            if rebuildData == True:
-                embeddedOneHotWordLabels = np.array([[self.w2vModel.wv[str(
-                    self.tokenizer.word_index[y_train[indexItem]])], self.tokenizer.texts_to_matrix(y_train[indexItem])[0], wordLabels[indexItem], meanSample[indexItem], exams[indexItem]] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
-                with open("data/embeddedOneHotWordLabels.pkl", "wb+") as embeddedOneHotWordLabelsFile:
-                    pkl.dump(embeddedOneHotWordLabels,
-                             embeddedOneHotWordLabelsFile)
-            else:
-                with open("data/embeddedOneHotWordLabels.pkl", "rb") as embeddedOneHotWordLabelsFile:
-                    embeddedOneHotWordLabels = pkl.load(
-                        embeddedOneHotWordLabelsFile)
-            embededWordLabels = embeddedOneHotWordLabels[:, 0].reshape(
-                (embeddedOneHotWordLabels.shape[0], 1, -1))
-            embededWordLabels = np.array([row[0][0] for row in embededWordLabels]).reshape(
-                (embeddedOneHotWordLabels.shape[0], 1, -1))
+            embededWordLabels = np.array([self.w2vModel.wv[str(
+                self.tokenizer.word_index[y_train[indexItem]])] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
+            oneHotWordLabel = np.array([self.tokenizer.texts_to_matrix(y_train[indexItem])[
+                0] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
+            exams = np.array([X_train[indexItem] for indexItem in indexArr[:batch_size]
+                     if y_train[indexItem] in self.tokenizer.word_index.keys()])
+            wordLabels = np.array([y_train[indexItem] for indexItem in indexArr[:batch_size]
+                          if y_train[indexItem] in self.tokenizer.word_index.keys()])
+            meanSample = np.array([means[indexItem] for indexItem in indexArr[:batch_size]
+                          if y_train[indexItem] in self.tokenizer.word_index.keys()])
+            
+            #reconfigure
+            embededWordLabels=embededWordLabels.reshape(embededWordLabels.shape[0],1,self.vecSize)
 
-            oneHotWordLabel = embeddedOneHotWordLabels[:, 1]
-            oneHotWordLabel=np.array([row for row in oneHotWordLabel])
-
-            wordLabels = embeddedOneHotWordLabels[:, 2]
-
-            meanSample = embeddedOneHotWordLabels[:, 3]
-            meanSample = np.array([row for row in meanSample])
-
-            exams = embeddedOneHotWordLabels[:, 4]
-            exams = np.array([row for row in exams])
-
-            realBatchSize=exams.shape[0]
+            realBatchSize = exams.shape[0]
             valid = np.ones((realBatchSize, 1))
             fake = np.zeros((realBatchSize, 1))
 
@@ -250,7 +233,7 @@ if __name__ == '__main__':
     topN = -1
     rebuildData = True
     loadModel = False
-    epochs=1500
+    epochs = 150
 
     trainDf = pd.read_csv("data/GANData.csv")
     trainDf["xTrain"] = trainDf["exam"]
@@ -297,7 +280,7 @@ if __name__ == '__main__':
     num_classes = len(set(y_train.tolist()))
 
     print("training the generator")
-    if loadModel==True:
+    if loadModel == True:
         #if you have already saved the model
         with CustomObjectScope({"getRecall": getRecall, "getPrecision": getPrecision}):
             with open("model/acganModel.model", "rb") as acganModelFile:
