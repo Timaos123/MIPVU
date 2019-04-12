@@ -23,7 +23,7 @@ import keras.backend as K
 from gensim.models import Word2Vec
 import os
 
-os.environ["CUDA_VISIBLE_DEVICES"]="1"
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
 
 
 def getRecall(y_true, y_pred):
@@ -146,9 +146,10 @@ class ACGAN():
 
             #sampling
             np.random.shuffle(indexArr)
-            exams = X_train[indexArr]
-            wordLabels = y_train[indexArr]
-            meanSample = means[indexArr]
+            #add [:batch_size] to lower the memory
+            exams = X_train[indexArr][:batch_size]
+            wordLabels = y_train[indexArr][:batch_size]
+            meanSample = means[indexArr][:batch_size]
             #embedded words, one-hot embedded words, word labels,meansample,exams
             if rebuildData == True:
                 embeddedOneHotWordLabels = np.array([[self.w2vModel.wv[str(
