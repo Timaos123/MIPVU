@@ -3,7 +3,7 @@ from __future__ import print_function, division
 
 from keras.datasets import mnist
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
-from keras.layers import BatchNormalization, Activation, Embedding, ZeroPadding2D, Bidirectional, TimeDistributed
+from keras.layers import BatchNormalization, Activation, MaxPooling2D, Embedding, ZeroPadding2D, Bidirectional, TimeDistributed
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.convolutional import UpSampling2D, Conv2D
 from keras.models import Sequential, Model, load_model
@@ -55,7 +55,7 @@ def getPrecision(y_true, y_pred):
 
 
 class ACGAN():
-    def __init__(self, sequenceList, vocabSize, num_classes, labelEmlabelDict, myTokenizer, w2vModel, vecSize=100, windowSize=3):
+    def __init__(self, sequenceList, vocabSize, num_classes, labelEmlabelDict, myTokenizer, w2vModel, vecSize=100, windowSize=3,poolSize=3):
         # Input shape
         seqLen = max([len(seqItem) for seqItem in sequenceList])
         self.vocabSize = vocabSize
@@ -72,6 +72,7 @@ class ACGAN():
         self.labelEmlabelDict = labelEmlabelDict
         self.vocabArr = np.array([w2vModel.wv[word]
                                   for word in w2vModel.wv.vocab])
+        self.poolSize = (poolSize, self.vecSize)
         self.indexWordDict = dict(list(
             zip(list(self.tokenizer.word_index.values()), list(self.tokenizer.word_index.keys()))))
 
@@ -119,7 +120,14 @@ class ACGAN():
 
     def build_discriminator(self):
         inputLayer = Input(shape=(self.seqLen, self.vecSize))
-        setenceLantLayer = Dense(units=1)(inputLayer)
+        reshapeLayer=Reshape((self.seqLen, self.vecSize,1))(inputLayer)
+        cnnLayer=Conv2D(kernel_size=self.CNNKernelShape,\
+                        filters=4,\
+                        data_format="channels_last")(reshapeLayer)
+        poolLayer=MaxPooling2D(pool_size=self.poolSize,padding="same")(cnnLayer)
+        setenceLantLayer = Dense(units=256)(poolLayer)
+        setenceLantLayer = Dense(units=128)(setenceLantLayer)
+        setenceLantLayer = Dense(units=64)(setenceLantLayer)
         flattenLayer = Flatten()(setenceLantLayer)
         validOutDense = Dense(units=1, name="validOutDense")(flattenLayer)
         wordOutDense = Dense(units=self.vocabSize,
@@ -233,7 +241,7 @@ if __name__ == '__main__':
     topN = -1
     rebuildData = True
     loadModel = False
-    epochs = 150
+    epochs = 1500
 
     trainDf = pd.read_csv("data/GANData.csv")
     trainDf["xTrain"] = trainDf["exam"]
