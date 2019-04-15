@@ -131,7 +131,7 @@ class ACGAN():
         flattenLayer = Flatten()(setenceLantLayer)
         validOutDense = Dense(units=1, name="validOutDense")(flattenLayer)
         wordOutDense = Dense(units=self.vocabSize,
-                             name="wordOutDense")(flattenLayer)
+                             name="wordOutDense",Activation="softmax")(flattenLayer)
 
         disModel = Model(
             inputLayer, [validOutDense, wordOutDense], name="discriminator")
