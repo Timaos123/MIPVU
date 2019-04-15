@@ -136,7 +136,7 @@ class ACGAN():
         disModel = Model(
             inputLayer, [validOutDense, wordOutDense], name="discriminator")
         disModel.summary()
-        disModel.compile("Adam", loss="mse", metrics=[
+        disModel.compile("Adam", loss="categorical_crossentropy", metrics=[
                          "acc", getRecall, getPrecision])
 
         return disModel
@@ -240,61 +240,63 @@ if __name__ == '__main__':
     vecSize = 100
     topN = -1
     rebuildData = True
-    loadModel = False
+    loadModel = True
     epochs = 1500
-
-    trainDf = pd.read_csv("data/GANData.csv")
-    trainDf["xTrain"] = trainDf["exam"]
-    trainDf["yTrain"] = trainDf["keyWord"]
-
-    print("Load the dataset ...")
-    X_train = np.array(trainDf["xTrain"])[:topN].tolist()
-    y_train = np.array(trainDf["yTrain"])[:topN]
-    means = np.array(trainDf["mean"])[:topN].tolist()
-
-    print("Configure inputs ...")
-    myTokenizer = Tokenizer(lower=True, split=" ")
-    myTokenizer.fit_on_texts(X_train)
-    X_train = myTokenizer.texts_to_sequences(X_train)
-    seqLen = max([len(XRow) for XRow in X_train])
-    vocabSize = len(myTokenizer.word_index.keys())
-    X_train = pad_sequences(X_train, maxlen=seqLen, padding="post")
-    X_train = [[str(wordItem) for wordItem in row]
-               for row in X_train]
-    myW2VModel = Word2Vec(X_train, size=vecSize, min_count=0)
-    myW2VModel.train(
-        X_train, total_examples=myW2VModel.corpus_count, epochs=myW2VModel.epochs)
-    X_train = np.array([[myW2VModel.wv[wordItem]
-                         for wordItem in row] for row in X_train])
-
-    means = myTokenizer.texts_to_sequences(means)
-    means = pad_sequences(means, maxlen=seqLen, padding="post")
-    means = [" ".join([str(indexItem) for indexItem in row]) for row in means]
-    meanVecList = [[myW2VModel.wv[wordItem] for wordItem in row if wordItem in list(
-        myW2VModel.wv.vocab)][0:seqLen] for row in means]
-
-    print("padding meanVecList")
-    for rowI in range(len(meanVecList)):
-        while len(meanVecList[rowI]) < seqLen:
-            meanVecList[rowI].append(myW2VModel.wv["0"])
-    meanVecArr = np.array(meanVecList)
-
-    print("configuring classes")
-    y_trainArr = np.array(y_train).T
-    myClassTokenizer = Tokenizer(lower=True, split=" ")
-    myClassTokenizer.fit_on_texts(y_trainArr)
-    y_trainArr = myClassTokenizer.texts_to_matrix(y_trainArr)
-    labelEmlabelDict = dict(list(zip(y_train, y_trainArr)))
-    num_classes = len(set(y_train.tolist()))
 
     print("training the generator")
     if loadModel == True:
         #if you have already saved the model
+        
         with CustomObjectScope({"getRecall": getRecall, "getPrecision": getPrecision}):
             with open("model/acganModel.model", "rb") as acganModelFile:
                 acgan = pkl.load(acganModelFile)
     else:
         #else
+
+        trainDf = pd.read_csv("data/GANData.csv")
+        trainDf["xTrain"] = trainDf["exam"]
+        trainDf["yTrain"] = trainDf["keyWord"]
+
+        print("Load the dataset ...")
+        X_train = np.array(trainDf["xTrain"])[:topN].tolist()
+        y_train = np.array(trainDf["yTrain"])[:topN]
+        means = np.array(trainDf["mean"])[:topN].tolist()
+
+        print("Configure inputs ...")
+        myTokenizer = Tokenizer(lower=True, split=" ")
+        myTokenizer.fit_on_texts(X_train)
+        X_train = myTokenizer.texts_to_sequences(X_train)
+        seqLen = max([len(XRow) for XRow in X_train])
+        vocabSize = len(myTokenizer.word_index.keys())
+        X_train = pad_sequences(X_train, maxlen=seqLen, padding="post")
+        X_train = [[str(wordItem) for wordItem in row]
+                for row in X_train]
+        myW2VModel = Word2Vec(X_train, size=vecSize, min_count=0)
+        myW2VModel.train(
+            X_train, total_examples=myW2VModel.corpus_count, epochs=myW2VModel.epochs)
+        X_train = np.array([[myW2VModel.wv[wordItem]
+                            for wordItem in row] for row in X_train])
+
+        means = myTokenizer.texts_to_sequences(means)
+        means = pad_sequences(means, maxlen=seqLen, padding="post")
+        means = [" ".join([str(indexItem) for indexItem in row]) for row in means]
+        meanVecList = [[myW2VModel.wv[wordItem] for wordItem in row if wordItem in list(
+            myW2VModel.wv.vocab)][0:seqLen] for row in means]
+
+        print("padding meanVecList")
+        for rowI in range(len(meanVecList)):
+            while len(meanVecList[rowI]) < seqLen:
+                meanVecList[rowI].append(myW2VModel.wv["0"])
+        meanVecArr = np.array(meanVecList)
+
+        print("configuring classes")
+        y_trainArr = np.array(y_train).T
+        myClassTokenizer = Tokenizer(lower=True, split=" ")
+        myClassTokenizer.fit_on_texts(y_trainArr)
+        y_trainArr = myClassTokenizer.texts_to_matrix(y_trainArr)
+        labelEmlabelDict = dict(list(zip(y_train, y_trainArr)))
+        num_classes = len(set(y_train.tolist()))
+
         acgan = ACGAN(X_train, vocabSize+1, num_classes,
                       labelEmlabelDict, myTokenizer, myW2VModel, vecSize=vecSize)
         acgan.train(X_train, y_trainArr, y_train,  meanVecArr, epochs=epochs,
