@@ -131,12 +131,12 @@ class ACGAN():
         flattenLayer = Flatten()(setenceLantLayer)
         validOutDense = Dense(units=1, name="validOutDense")(flattenLayer)
         wordOutDense = Dense(units=self.vocabSize,
-                             name="wordOutDense",Activation="softmax")(flattenLayer)
+                             name="wordOutDense",activation="softmax")(flattenLayer)
 
         disModel = Model(
             inputLayer, [validOutDense, wordOutDense], name="discriminator")
         disModel.summary()
-        disModel.compile("Adam", loss="categorical_crossentropy", metrics=[
+        disModel.compile("Adam", loss=["binary_crossentropy", "categorical_crossentropy"], metrics=[
                          "acc", getRecall, getPrecision])
 
         return disModel
@@ -198,7 +198,7 @@ class ACGAN():
         sourceWord = inputList[0]
         sourceMean = inputList[1]
         sourceWordIndexArr = np.array(
-            [self.w2vModel.wv[str(self.tokenizer.word_index[sourceWord])]]).reshape(-1, 1, 100)
+            [self.w2vModel.wv[str(self.tokenizer.word_index[sourceWord])]]).reshape(-1, 1, self.vecSize)
         sourceMeanIndexList = [[self.tokenizer.word_index[wordItem] for wordItem in sourceMean.split(
             " ") if wordItem in list(self.tokenizer.word_index.keys())]]
         sourceMeanIndexList = pad_sequences(
@@ -237,10 +237,10 @@ class ACGAN():
 
 if __name__ == '__main__':
 
-    vecSize = 100
+    vecSize = 50
     topN = -1
     rebuildData = True
-    loadModel = True
+    loadModel = False
     epochs = 1500
 
     print("training the generator")
