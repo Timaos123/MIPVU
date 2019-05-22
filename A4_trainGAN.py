@@ -263,8 +263,6 @@ class ACGAN():
             wordItem)] for wordItem in row if self.sentVec2Word(
             wordItem) != 0]) for row in sentenceVecArr][0]
 
-        print(self.combined.predict([sourceWordIndexArr, sourceMeanIndexArr]))
-
         return sentence
 
     def sortByPos(self, sentence):
