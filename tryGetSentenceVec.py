@@ -10,7 +10,7 @@ import tryGetWordVec as TGWV
 import re
 from gensim.models import Word2Vec
 
-def getSentenceVec(mySentence,WVModel):
+def getSentenceVec(mySentence,myW2VModel):
     mySentence=mySentence.lower()
     mySentence=re.sub('['+string.punctuation+']','',mySentence)
     myWordList=mySentence.split(" ")
@@ -19,7 +19,7 @@ def getSentenceVec(mySentence,WVModel):
             myWordList.remove("")
         except ValueError:
             break
-    myWordVecArr=np.array([myW2VModel[wordItem] for wordItem in myWordList if wordItem in myW2VModel.wv])
+    myWordVecArr=np.array([myW2VModel.wordIndexDict[wordItem] for wordItem in myWordList if wordItem in myW2VModel.wordIndexDict])
     return myWordVecArr
 
 if __name__ == '__main__':

@@ -17,7 +17,12 @@ import nltk.stem
 def getWordMeanPos(wordItem,mySentence,WVModel):
     s = nltk.stem.SnowballStemmer('english')
     wordItem=s.stem(wordItem)
-    wordMeanExamList=tc.main(wordItem)
+    print("loading gan model")
+    #if you have already saved the model
+    with CustomObjectScope({"getRecall": getRecall, "getPrecision": getPrecision}):
+        with open("model/acganModel.model", "rb") as acganModelFile:
+            acgan = pkl.load(acganModelFile)
+    wordMeanExamList=tc.main(wordItem,acgan)
     wordMeanExamDistanceList=[]
     if len(wordMeanExamList)==0:
         return -1
@@ -32,12 +37,13 @@ def getWordMeanPos(wordItem,mySentence,WVModel):
     return meanPos
 
 def main(nodeWord,mySentence):
-    if nodeWord not in mySentence.split(" "):
+    s = nltk.stem.SnowballStemmer('english')
+    nodeWord=s.stem(nodeWord)
+    if nodeWord not in [s.stem(wordItem) for wordItem in mySentence.split(" ")]:
         return "err:no that word"
     myWVModel=tlwv.loadWordVec()
     mySentence=mySentence.lower()
     mySentence=re.sub('['+string.punctuation+']','',mySentence)
-    myWordList=mySentence.split(" ")
     meanPos=getWordMeanPos(nodeWord,mySentence,myWVModel)
     if meanPos==0:return False
     else: return True

@@ -10,7 +10,38 @@ import json
 import tqdm
 import re
 import nltk.stem.snowball as sb
-def main(word,keepNone=False):
+import pickle as pkl
+from keras.utils.generic_utils import CustomObjectScope
+import keras.backend as K
+
+def getRecall(y_true, y_pred):
+    """Recall metric.
+
+    Only computes a batch-wise average of recall.
+
+    Computes the recall, a metric for multi-label classification of
+    how many relevant items are selected.
+    """
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+
+def getPrecision(y_true, y_pred):
+    """Precision metric.
+
+    Only computes a batch-wise average of precision.
+
+    Computes the precision, a metric for multi-label classification of
+    how many selected items are relevant.
+    """
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+def main(word,ganModel,keepNone=False):
     '''
     input:
     word(str):input word
@@ -22,7 +53,7 @@ def main(word,keepNone=False):
     myUrl="https://www.macmillandictionary.com/dictionary/british/"+word
     res=request.urlopen(myUrl)
     res.encoding = 'utf-8'
-    
+
     print("finding needed information ...")
     soupStr=bs(res.read(),features="lxml")
     olBsL=soupStr.find_all("ol",class_="senses")
@@ -87,9 +118,11 @@ def main(word,keepNone=False):
             except IndexError:
                 pass
     meanExamList=list(zip(meaningList,exampleList))
-    if len(meanExamList[0][1])==0:
-        print("problems in '",word,"':no enough examples. replacing examples with meanings")
-        meanExamList=[(meanExamItem[0],[meanExamItem[0]]) for meanExamItem in meanExamList]
+    for meanExamI in range(len(meanExamList)):
+        if len(meanExamList[meanExamI][1])==0:
+            print("problems in '",meanExamList[meanExamI][1],"':no enough examples. replacing examples with predicted example by model")
+            meanExamList[meanExamI][1]=ganModel.genPredictItem([word,meanExamList[meanExamI][0]])
+
     tempMeanExamList=[]
     if keepNone==False:
         for row in meanExamList:
