@@ -14,7 +14,7 @@ import pickle as pkl
 from keras.utils.generic_utils import CustomObjectScope
 import keras.backend as K
 
-def main(word,ganModel,keepNone=False):
+def main(word,ganModel=None,keepNone=False):
     '''
     input:
     word(str):input word
@@ -35,10 +35,11 @@ def main(word,ganModel,keepNone=False):
     else:
         print("problems in '",word,"':no enough meanings")
         tempWord=word
+        #when there are problems checked ,stem can be used
         sb_stemmer=sb.SnowballStemmer("english")
         word=sb_stemmer.stem(word)
         if tempWord!=word:
-            return main(word)
+            return main(word,ganModel)
         else:
             return []
     liBsList=olBs.find_all("li")
@@ -66,7 +67,7 @@ def main(word,ganModel,keepNone=False):
                     print("problems in",word,": None")
                     return [("no means","no examples")]
                 else:
-                    return main(liDivItem,keepNone=False)
+                    return main(liDivItem,ganModel,keepNone=False)
             elif len(liItem.\
                     find_all("div",class_="SENSE")[0].\
                     find_all("div",class_="sideboxbody"))>0:
@@ -78,8 +79,7 @@ def main(word,ganModel,keepNone=False):
                     print("problems in",word,": None")
                     return [("no means","no examples")]
                 else:
-                    print(liDivItem)
-                    return main(liDivItem,keepNone=False)
+                    return main(liDivItem,ganModel,keepNone=False)
             else:
                 return [("no means","no examples")]
             meaningList.append(liDivItem)
@@ -92,11 +92,15 @@ def main(word,ganModel,keepNone=False):
             except IndexError:
                 pass
     meanExamList=list(zip(meaningList,exampleList))
+    meanExamList=[list(row) for row in meanExamList]
     for meanExamI in range(len(meanExamList)):
         if len(meanExamList[meanExamI][1])==0:
-            print("problems in '",meanExamList[meanExamI][1],"':no enough examples. replacing examples with predicted example by model")
-            meanExamList[meanExamI][1]=ganModel.genPredictItem([word,meanExamList[meanExamI][0]])
-
+            if ganModel!=None:
+                print("problems in '",meanExamList[meanExamI][0],"':no enough examples. replacing examples with predicted example by model")
+                meanExamList[meanExamI][1]=[ganModel.genPredictItem([word,meanExamList[meanExamI][0]])]
+    del ganModel
+    with open("data/meanExamList.pkl","wb+") as meanExamListFile:
+        pkl.dump(meanExamList,meanExamListFile)
     tempMeanExamList=[]
     if keepNone==False:
         for row in meanExamList:
@@ -106,4 +110,4 @@ def main(word,ganModel,keepNone=False):
     return meanExamList
     
 if __name__ == '__main__':
-    print(main("kept",keepNone=False))
+    print(main("kept",ganModel,keepNone=False))

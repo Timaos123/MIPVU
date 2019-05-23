@@ -54,8 +54,6 @@ def getPrecision(y_true, y_pred):
     return precision
 
 def getWordMeanPos(wordItem,mySentence,WVModel):
-    s = nltk.stem.SnowballStemmer('english')
-    wordItem=s.stem(wordItem)
     print("loading gan model")
     #if you have already saved the model
     with CustomObjectScope({"getRecall": getRecall, "getPrecision": getPrecision}):
@@ -77,8 +75,7 @@ def getWordMeanPos(wordItem,mySentence,WVModel):
 
 def main(nodeWord,mySentence):
     s = nltk.stem.SnowballStemmer('english')
-    nodeWord=s.stem(nodeWord)
-    if nodeWord not in [s.stem(wordItem) for wordItem in mySentence.split(" ")]:
+    if s.stem(nodeWord) not in [s.stem(wordItem) for wordItem in mySentence.split(" ")]:
         return "err:no that word"
     myWVModel=tlwv.loadWordVec()
     mySentence=mySentence.lower()

@@ -27,8 +27,10 @@ def transTF(YN):
 
 def filterUneffectSample(row):
     s = nltk.stem.SnowballStemmer('english')
-    row["nodeWord"]=s.stem(row["nodeWord"])
-    row["message"]=" ".join(s.stem(row["message"]).split(" "))
+    # row["nodeWord"]=s.stem(row["nodeWord"])
+    # row["message"]=" ".join([s.stem(wordItem) for wordItem in row["message"].split(" ")])
+    if row["nodeWord"] not in row["message"]:
+        row["message"]+=row["nodeWord"]
     return row
 
 if __name__ == '__main__':

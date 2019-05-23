@@ -187,15 +187,20 @@ class ACGAN():
             #sampling
             np.random.shuffle(indexArr)
             embededWordLabels = np.array([self.w2vModel.wv[str(
-                self.tokenizer.word_index[y_train[indexItem]])] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
+                self.tokenizer.word_index[y_train[indexItem]])] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()
+                and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
             oneHotWordLabel = np.array([self.tokenizer.texts_to_matrix(y_train[indexItem])[
-                0] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
+                0] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()
+                and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
             exams = np.array([X_train[indexItem] for indexItem in indexArr[:batch_size]
-                              if y_train[indexItem] in self.tokenizer.word_index.keys()])
+                              if y_train[indexItem] in self.tokenizer.word_index.keys() 
+                              and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
             wordLabels = np.array([y_train[indexItem] for indexItem in indexArr[:batch_size]
-                                   if y_train[indexItem] in self.tokenizer.word_index.keys()])
+                                   if y_train[indexItem] in self.tokenizer.word_index.keys()
+                                   and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
             meanSample = np.array([means[indexItem] for indexItem in indexArr[:batch_size]
-                                   if y_train[indexItem] in self.tokenizer.word_index.keys()])
+                                   if y_train[indexItem] in self.tokenizer.word_index.keys()
+                                   and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
 
             #reconfigure
             embededWordLabels = embededWordLabels.reshape(
@@ -288,7 +293,7 @@ class ACGAN():
 
 if __name__ == '__main__':
 
-    vecSize = 200
+    vecSize = 50
     topN = -1
     rebuildData = False
     loadModel = False
@@ -318,7 +323,7 @@ if __name__ == '__main__':
         myTokenizer = Tokenizer(lower=True, split=" ")
         myTokenizer.fit_on_texts(X_train)
         X_train = myTokenizer.texts_to_sequences(X_train)
-        seqLen = max([len(XRow) for XRow in X_train])
+        seqLen = int(np.mean([len(XRow) for XRow in X_train]))
         vocabSize = len(myTokenizer.word_index.keys())
         X_train = pad_sequences(X_train, maxlen=seqLen, padding="post")
         X_train = [[str(wordItem) for wordItem in row]
@@ -330,6 +335,7 @@ if __name__ == '__main__':
                              for wordItem in row] for row in X_train])
 
         means = myTokenizer.texts_to_sequences(means)
+        means=[row[:seqLen] for row in means]#when the length of the sequence is mean
         means = pad_sequences(means, maxlen=seqLen, padding="post")
         means = [" ".join([str(indexItem) for indexItem in row])
                  for row in means]
