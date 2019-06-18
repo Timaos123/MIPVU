@@ -27,10 +27,10 @@ import os
 import tensorflow as tf
 import time
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
+os.environ["CUDA_VISIBLE_DEVICES"]="0"
+config=tf.ConfigProto()
+config.gpu_options.allow_growth=True
+session=tf.Session(config=config)
 KTF.set_session(session)
 
 
@@ -102,30 +102,28 @@ class ACGAN():
         wordInput = Input(shape=(1, self.vecSize), name="wordInput")
 
         meanInput = Input(shape=(self.seqLen, self.vecSize,), name="meanInput")
-        encoder_outputs, state_h, state_c = LSTM(
-            units=self.vecSize, return_sequences=False, return_state=True, name="encoder")(meanInput)
+        encoder_outputs, state_h, state_c = LSTM(units=self.vecSize, return_sequences=False, return_state=True, name="encoder")(meanInput)
 
         # doubleWordEmbeddingLayer=concatenate([wordEmbeddingFlattenLayer, wordEmbeddingFlattenLayer],axis=1)
-        decoderInitState = [state_h, state_c]
+        decoderInitState=[state_h,state_c]
         decoderInput = multiply([encoder_outputs, wordInput])
         # concateLayer=Reshape((1,int(concateLayer.shape[1])))(concateLayer)
 
         LSTMLayerList = []
-        LSTMLayer, LSTMLayer_h, LSTMLayer_c = LSTM(units=self.vecSize, return_state=True, return_sequences=True, name="decoder")(
-            decoderInput, initial_state=decoderInitState)
-        decoderInitState = [LSTMLayer_h, LSTMLayer_c]
-        LSTMLayerList.append(LSTMLayer)
+        LSTMLayer, LSTMLayer_h, LSTMLayer_c = LSTM(units=self.vecSize, return_state=True,return_sequences=True, name="decoder")(decoderInput,initial_state=decoderInitState)
+        decoderInitState=[LSTMLayer_h,LSTMLayer_c]
+        LSTMLayer.append(LSTMLayer)
         for i in range(self.seqLen-1):
-            LSTMLayer, LSTMLayer_h, LSTMLayer_c = LSTM(units=self.vecSize, return_state=True, return_sequences=True)(
-                LSTMLayer, initial_state=decoderInitState)
-            decoderInitState = [LSTMLayer_h, LSTMLayer_c]
-            LSTMLayerList.append(LSTMLayer)
+            LSTMLayer, LSTMLayer_h, LSTMLayer_c = Bidirectional(
+                LSTM(units=self.vecSize, return_state=True, return_sequences=True, name="decoder"))(LSTMLayer,initial_state=decoderInitState)
+            decoderInitState=[LSTMLayer_h, LSTMLayer_c]
+            LSTMLayer.append(LSTMLayer)
         LSTMFinalLayer = concatenate(LSTMLayerList, axis=1)
         timeDenseLayer = TimeDistributed(
-            Dense(units=self.vecSize, activation="linear"))(LSTMFinalLayer)
+            Dense(units=self.vecSize,activation="linear"))(LSTMFinalLayer)
 
         myModel = Model([wordInput, meanInput],
-                        timeDenseLayer, name="generator")
+                        exmDenseLayer, name="generator")
         myModel.summary()
         return myModel
 
@@ -145,8 +143,8 @@ class ACGAN():
         validOutDense = Dense(units=32)(validOutDense)
         validOutDense = Dense(units=1, name="validOutDense",
                               activation="sigmoid")(validOutDense)
-        wordOutDense = Dense(units=64, activation="relu")(flattenLayer)
-        wordOutDense = Dense(units=32, activation="relu")(wordOutDense)
+        wordOutDense = Dense(units=64,activation="relu")(flattenLayer)
+        wordOutDense = Dense(units=32,activation="relu")(wordOutDense)
         wordOutDense = Dense(units=self.vocabSize,
                              name="wordOutDense", activation="softmax")(wordOutDense)
 
@@ -159,12 +157,12 @@ class ACGAN():
         return disModel
 
     def writeLog(self, callback, names, logs, batchNO):
-        for name, value in zip(names, logs):
-            summary = tf.Summary()
-            summaryValue = summary.value.add()
-            summaryValue.simple_value = value
-            summaryValue.tag = name
-            callback.writer.add_summary(summary, batchNO)
+        for name, value in zip(names,logs):
+            summary=tf.Summary()
+            summaryValue=summary.value.add()
+            summaryValue.simple_value=value
+            summaryValue.tag=name
+            callback.writer.add_summary(summary,batchNO)
             callback.writer.flush()
 
     def train(self, X_train, y_trainArr, y_train, means, epochs, batch_size=128, sample_interval=50, rebuildData=False):
@@ -177,7 +175,7 @@ class ACGAN():
         #prepare for tensorboard
         if "log" not in os.listdir("."):
             os.mkdir("log")
-        callback = TensorBoard("./log")
+        callback=TensorBoard("./log")
         callback.set_model(self.combined)
         for epoch in range(epochs):
 
@@ -187,20 +185,15 @@ class ACGAN():
             #sampling
             np.random.shuffle(indexArr)
             embededWordLabels = np.array([self.w2vModel.wv[str(
-                self.tokenizer.word_index[y_train[indexItem]])] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()
-                and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
+                self.tokenizer.word_index[y_train[indexItem]])] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
             oneHotWordLabel = np.array([self.tokenizer.texts_to_matrix(y_train[indexItem])[
-                0] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()
-                and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
+                0] for indexItem in indexArr[:batch_size] if y_train[indexItem] in self.tokenizer.word_index.keys()])
             exams = np.array([X_train[indexItem] for indexItem in indexArr[:batch_size]
-                              if y_train[indexItem] in self.tokenizer.word_index.keys() 
-                              and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
+                              if y_train[indexItem] in self.tokenizer.word_index.keys()])
             wordLabels = np.array([y_train[indexItem] for indexItem in indexArr[:batch_size]
-                                   if y_train[indexItem] in self.tokenizer.word_index.keys()
-                                   and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
+                                   if y_train[indexItem] in self.tokenizer.word_index.keys()])
             meanSample = np.array([means[indexItem] for indexItem in indexArr[:batch_size]
-                                   if y_train[indexItem] in self.tokenizer.word_index.keys()
-                                   and str(self.tokenizer.word_index[y_train[indexItem]]) in self.w2vModel.wv.vocab.keys()])
+                                   if y_train[indexItem] in self.tokenizer.word_index.keys()])
 
             #reconfigure
             embededWordLabels = embededWordLabels.reshape(
@@ -231,7 +224,7 @@ class ACGAN():
             g_loss = self.combined.train_on_batch(
                 [embededWordLabels, meanSample], [fake, oneHotWordLabel])
 
-            self.writeLog(callback, list(metricsDict.keys()), g_loss, epoch)
+            self.writeLog(callback, list(metricsDict.keys()),g_loss,epoch)
             print(epoch, ":", "d:", metricsDict, "g:loss:", g_loss[0])
 
     def genPredictItem(self, inputList):
@@ -268,6 +261,8 @@ class ACGAN():
             wordItem)] for wordItem in row if self.sentVec2Word(
             wordItem) != 0]) for row in sentenceVecArr][0]
 
+        print(self.combined.predict([sourceWordIndexArr, sourceMeanIndexArr]))
+
         return sentence
 
     def sortByPos(self, sentence):
@@ -293,7 +288,7 @@ class ACGAN():
 
 if __name__ == '__main__':
 
-    vecSize = 50
+    vecSize = 200
     topN = -1
     rebuildData = False
     loadModel = False
@@ -323,7 +318,7 @@ if __name__ == '__main__':
         myTokenizer = Tokenizer(lower=True, split=" ")
         myTokenizer.fit_on_texts(X_train)
         X_train = myTokenizer.texts_to_sequences(X_train)
-        seqLen = int(np.mean([len(XRow) for XRow in X_train]))
+        seqLen = max([len(XRow) for XRow in X_train])
         vocabSize = len(myTokenizer.word_index.keys())
         X_train = pad_sequences(X_train, maxlen=seqLen, padding="post")
         X_train = [[str(wordItem) for wordItem in row]
@@ -335,7 +330,6 @@ if __name__ == '__main__':
                              for wordItem in row] for row in X_train])
 
         means = myTokenizer.texts_to_sequences(means)
-        means=[row[:seqLen] for row in means]#when the length of the sequence is mean
         means = pad_sequences(means, maxlen=seqLen, padding="post")
         means = [" ".join([str(indexItem) for indexItem in row])
                  for row in means]
@@ -364,7 +358,7 @@ if __name__ == '__main__':
             pkl.dump(acgan, acganModelFile)
 
     end = time.time()
-    print("duration:", end-start)
+    print("duration:",end-start)
     print("testing the generator")
     testSample = [
         "above", "at a higher level than something or directly over it"]

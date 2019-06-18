@@ -10,17 +10,18 @@ import tryGetWordVec as TGWV
 import re
 from gensim.models import Word2Vec
 
-def getSentenceVec(mySentence,myW2VModel):
+def getSentenceVec(mySentence,WVModel):
     mySentence=mySentence.lower()
     mySentence=re.sub('['+string.punctuation+']','',mySentence)
     myWordList=mySentence.split(" ")
     for myWordItem in myWordList:
-        try:
+        if "" in myWordList:
             myWordList.remove("")
-        except ValueError:
+        else:
             break
-    myWordVecArr=np.array([myW2VModel.wordIndexDict[wordItem] for wordItem in myWordList if wordItem in myW2VModel.wordIndexDict])
+    myWordVecArr=np.array([WVModel[wordItem] for wordItem in myWordList if wordItem in WVModel.wv])
     return myWordVecArr
+
 
 if __name__ == '__main__':
     mySentence="We might need to sell this fund."

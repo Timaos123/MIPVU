@@ -9,7 +9,6 @@ import pandas as pd
 import tqdm
 import numpy as np
 import re
-import nltk.stem
 
 
 def transTF(YN):
@@ -25,13 +24,6 @@ def transTF(YN):
     else:
         return False
 
-def filterUneffectSample(row):
-    s = nltk.stem.SnowballStemmer('english')
-    # row["nodeWord"]=s.stem(row["nodeWord"])
-    # row["message"]=" ".join([s.stem(wordItem) for wordItem in row["message"].split(" ")])
-    if row["nodeWord"] not in row["message"]:
-        row["message"]+=row["nodeWord"]
-    return row
 
 if __name__ == '__main__':
 
@@ -54,11 +46,6 @@ if __name__ == '__main__':
     # corpusDf.columns = ["nodeWord", "type", "message"]
     corpusDf["message"] = corpusDf["message"].apply(lambda x: x.lower())
     corpusDf["type"] = corpusDf["type"].apply(lambda x: transTF(x))
-
-    print("deleting samples without node words")
-    print("original size:",corpusDf.shape)
-    corpusDf=corpusDf.apply(lambda x:filterUneffectSample(x),axis=1)
-    print("final size:",corpusDf.shape)
 
     print("saving data ...")
     corpusDf.to_csv("data/structuredData.csv")

@@ -8,17 +8,19 @@ import numpy as np
 import string
 from threading import Thread
 import tqdm
-import tryLoadWordVec as tlwv
 import nltk.stem
 from nltk import WordNetLemmatizer
 from gensim.models import Word2Vec
 import pickle as pkl
+import matplotlib.pyplot as plt
+import tryLoadWordVec as tlwv
+import tryVisNorm as tvn
 
-def getSentenceBasicMeanDis(keyWord,sentence,w2vModel):
+def getSentenceBasicMeanDis(sentence,keyWord,w2vModel=None,vectorType="VDB"):
     '''
     input:
-    keyWord(str):input word
     sentence(str):keyWord's context
+    keyWord(str):input word
     w2vModel(gensim.models.Word2vec.model):presaved w2v model
     -------------------------------
     return:
@@ -27,9 +29,10 @@ def getSentenceBasicMeanDis(keyWord,sentence,w2vModel):
     meanExamList=tc.main(keyWord)
     if len(meanExamList)>0:
         basicMeanExamList=meanExamList[0][1]
-        basicMeanExamList=[[word for word in basicMeanExamItem.split(" ") if word in w2vModel.wv.vocab] for basicMeanExamItem in basicMeanExamList ]
-        sentence=[word for word in sentence.split(" ") if word in w2vModel.wv.vocab]
-        distanceList=[w2vModel.n_similarity(sentence,exam) for exam in basicMeanExamList]
+        if vectorType=="VDB":
+            distanceList=[tgbs.getDistanceBetweenSentences(sentence,exam,WVModel=w2vModel) for exam in basicMeanExamList]
+        elif vectorType=="LDB":
+            distanceList=[tgbs.getDistanceBetweenSentences(sentence,exam,vectorType="LDB") for exam in basicMeanExamList]
         return np.mean(distanceList)
     return 0
 
@@ -37,7 +40,7 @@ if __name__=="__main__":
     print("loading data ...")
     corpusDf=pd.read_csv("data/structuredData.csv")
     TcorpusDf=corpusDf[corpusDf["type"]==True]
-    FcorpusDf=corpusDf[corpusDf["type"]==False]
+    FcorpusDf=corpusDf[corpusDf["type"]==False].sample(1000)
     print("T samples:",TcorpusDf.shape[0])
     print("F samples:",FcorpusDf.shape[0])
     
@@ -48,10 +51,10 @@ if __name__=="__main__":
     print("transforming data ...")
     TcorpusArr=np.array(TcorpusDf)
     FcorpusArr=np.array(FcorpusDf)
-    TcorpusBasDisList=[getSentenceBasicMeanDis(row[1],row[3],myW2VModel) for row in tqdm.tqdm(TcorpusArr)]
+    TcorpusBasDisList=[getSentenceBasicMeanDis(row[1],row[2],vectorType="LDB") for row in tqdm.tqdm(TcorpusArr)]
     with open("data/TcorpusBasDisList.pkl","wb+") as TcorpusBasDisListFile:
         pkl.dump(TcorpusBasDisList,TcorpusBasDisListFile)
-    FcorpusBasDisList=[getSentenceBasicMeanDis(row[1],row[3],myW2VModel) for row in tqdm.tqdm(FcorpusArr)]
+    FcorpusBasDisList=[getSentenceBasicMeanDis(row[1],row[2],vectorType="LDB") for row in tqdm.tqdm(FcorpusArr)]
     with open("data/FcorpusBasDisList.pkl","wb+") as FcorpusBasDisListFile:
         pkl.dump(FcorpusBasDisList,FcorpusBasDisListFile)
 
@@ -65,3 +68,6 @@ if __name__=="__main__":
     TFDistributionDict={"TMean":TMean,"TStd":TStd,"FMean":FMean,"FStd":FStd}
     with open("model/TFDistributionDict.pkl","wb+") as TFDistributionDictFile:
         pkl.dump(TFDistributionDict,TFDistributionDictFile)
+    print("visualizing ...")
+    myPlt=tvn.visNormal(np.array(TcorpusBasDisList),deleteOutlier=False,partNum=50)
+    myPlt.show()

@@ -42,10 +42,7 @@ if __name__=="__main__":
         if len(re.findall("[0-9]+",word))>0:
             continue
         if word not in wordMeanExamDict.keys():
-            try:
-                wordMeanExamDict[word]=TC.main(word.strip())
-            except Exception as ex:
-                print(word,"\n",ex)
+            wordMeanExamDict[word]=TC.main(word.strip())
         stemedWord=sb_stemmer.stem(word)
         if stemedWord not in wordMeanExamDict.keys():
               wordMeanExamDict[stemedWord]=TC.main(stemedWord.strip())
