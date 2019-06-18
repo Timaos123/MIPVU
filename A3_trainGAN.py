@@ -293,7 +293,7 @@ class ACGAN():
 
 if __name__ == '__main__':
 
-    vecSize = 50
+    vecSize = 200
     topN = -1
     rebuildData = False
     loadModel = False
